@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autoscaler Console</title>
+<style>
+  :root {
+    --white: #ffffff;
+    --green: #16a34a;
+    --green-dark: #0f6b33;
+    --green-light: #e8f7ee;
+    --text: #1a1a1a;
+    --muted: #5b6b5f;
+    --border: #bfe5cc;
+    --red: #c2410c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 14px;
+    background: var(--white);
+    color: var(--text);
+  }
+  header {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+    border-bottom: 2px solid var(--green); padding: 14px 20px;
+  }
+  header h1 { font-size: 18px; margin: 0; color: var(--green-dark); }
+  .status { display: flex; gap: 8px; align-items: center; color: var(--muted); }
+  .dot { width: 10px; height: 10px; background: var(--green); display: inline-block; }
+  .dot.off { background: var(--muted); }
+  .layout {
+    display: grid; grid-template-columns: 280px 1fr; gap: 0; min-height: calc(100vh - 60px);
+  }
+  aside {
+    border-right: 1px solid var(--border); padding: 16px; background: var(--white);
+  }
+  aside h2, .panel h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--green-dark); margin: 0 0 12px;
+  }
+  .ctrl { margin-bottom: 16px; }
+  .ctrl label { display: flex; justify-content: space-between; font-size: 13px; }
+  .ctrl input[type=range] { width: 100%; accent-color: var(--green); }
+  .ctrl .val { color: var(--green-dark); font-weight: bold; }
+  .seg { display: flex; border: 1px solid var(--green); }
+  .seg button {
+    flex: 1; background: var(--white); border: none; padding: 8px; cursor: pointer;
+    font: inherit; color: var(--text);
+  }
+  .seg button.on { background: var(--green); color: var(--white); }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  button.btn {
+    font: inherit; padding: 8px 12px; border: 1px solid var(--green);
+    background: var(--white); color: var(--green-dark); cursor: pointer;
+  }
+  button.btn.primary { background: var(--green); color: var(--white); }
+  button.btn:hover { background: var(--green-light); }
+  button.btn.primary:hover { background: var(--green-dark); }
+  main { padding: 16px 20px; display: grid; gap: 16px; align-content: start; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .kpi { border: 1px solid var(--border); padding: 12px; }
+  .kpi .l { color: var(--muted); font-size: 12px; }
+  .kpi .v { font-size: 22px; font-weight: bold; color: var(--green-dark); }
+  .kpi .v.warn { color: var(--red); }
+  .panel { border: 1px solid var(--border); padding: 14px; }
+  canvas { width: 100%; height: 260px; display: block; border: 1px solid var(--border); }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 6px; }
+  .log { height: 170px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; font-size: 13px; }
+  .log div { padding: 2px 0; border-bottom: 1px dashed var(--border); }
+  .log .t { color: var(--muted); }
+  .log .up { color: var(--green-dark); }
+  .log .down { color: var(--red); }
+  .note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+  /* site navigation */
+  .vnav { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px; border-bottom: 1px solid #16a34a; background: #ffffff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .vnav a { color: #0f6b33; text-decoration: none; padding: 5px 10px; border: 1px solid transparent; }
+  .vnav a:hover { border-color: #16a34a; background: #e8f7ee; }
+  .vnav a[aria-current="page"] { background: #16a34a; color: #ffffff; }
+  @media (max-width: 600px) { .vnav { padding: 8px 12px; } .vnav a { padding: 4px 7px; } }
+</style>
+</head>
+<body>
+<nav class="vnav" aria-label="Main">
+    <a href="index.html" aria-current="page">console</a>
+    <a href="cluster-view.html">cluster</a>
+    <a href="timeline-view.html">timeline</a>
+    <a href="tradeoff-view.html">trade-off</a>
+    <a href="alerts-view.html">alerts</a>
+    <a href="explainer.html">about</a>
+  </nav>
+
+<header>
+  <h1>&gt; smart-autoscaler / console</h1>
+  <div class="status"><span id="dot" class="dot"></span><span id="state">stopped</span></div>
+</header>
+
+<div class="layout">
+
+  <aside>
+    <h2>policy</h2>
+
+    <div class="ctrl">
+      <div class="seg" id="mode">
+        <button data-mode="hpa">stock HPA</button>
+        <button data-mode="smart" class="on">smart</button>
+      </div>
+    </div>
+
+    <div class="ctrl">
+      <label>min replicas <span class="val" id="v-min"></span></label>
+      <input type="range" id="min" min="1" max="10" value="3">
+    </div>
+    <div class="ctrl">
+      <label>max replicas <span class="val" id="v-max"></span></label>
+      <input type="range" id="max" min="10" max="60" value="40">
+    </div>
+    <div class="ctrl">
+      <label>p99 SLO (ms) <span class="val" id="v-slo"></span></label>
+      <input type="range" id="slo" min="100" max="500" step="10" value="250">
+    </div>
+    <div class="ctrl">
+      <label>forecast horizon (ticks) <span class="val" id="v-hor"></span></label>
+      <input type="range" id="hor" min="1" max="20" value="8">
+    </div>
+    <div class="ctrl">
+      <label>capacity per pod (req/s) <span class="val" id="v-cap"></span></label>
+      <input type="range" id="cap" min="20" max="200" step="5" value="80">
+    </div>
+
+    <h2 style="margin-top:20px">controls</h2>
+    <div class="btns">
+      <button class="btn primary" id="run">start</button>
+      <button class="btn" id="spike">traffic spike</button>
+      <button class="btn" id="reset">reset</button>
+    </div>
+    <p class="note">Simulated load. Change the sliders while running to see the effect on the next decisions.</p>
+  </aside>
+
+  <main>
+    <div class="kpis">
+      <div class="kpi"><div class="l">current load (req/s)</div><div class="v" id="k-load">0</div></div>
+      <div class="kpi"><div class="l">pods running</div><div class="v" id="k-pods">0</div></div>
+      <div class="kpi"><div class="l">p99 latency (ms)</div><div class="v" id="k-lat">0</div></div>
+      <div class="kpi"><div class="l">cost index</div><div class="v" id="k-cost">0</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>load vs capacity</h2>
+      <canvas id="chart" width="900" height="260"></canvas>
+      <div class="legend">
+        <span><i style="background:#16a34a"></i>request load</span>
+        <span><i style="background:#0f6b33;height:2px"></i>pods x capacity</span>
+        <span><i style="background:#c2410c"></i>SLO breach</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>decision log</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const cfg = () => ({
+    min: +$('min').value, max: +$('max').value, slo: +$('slo').value,
+    hor: +$('hor').value, cap: +$('cap').value
+  });
+
+  let mode = 'smart', running = false, timer = null, t = 0;
+  let spikeLeft = 0;
+  let pods, history, logLines;
+
+  function reset() {
+    stop();
+    t = 0; spikeLeft = 0;
+    const c = cfg();
+    pods = c.min;
+    history = [];
+    logLines = [];
+    $('log').innerHTML = '';
+    addLog('reset · pods=' + pods, '');
+    render();
+  }
+
+  // Synthetic demand: daily wave plus noise plus optional spike
+  function baseLoad(tick) {
+    const day = Math.sin(tick / 12) * 0.5 + 0.5;          // 0..1
+    return 120 + day * 520;
+  }
+  function loadAt(tick) {
+    let v = baseLoad(tick) * (0.92 + Math.random() * 0.16);
+    if (spikeLeft > 0) { v *= 1.9; }
+    return Math.round(v);
+  }
+
+  function step() {
+    const c = cfg();
+    t++;
+    if (spikeLeft > 0) spikeLeft--;
+
+    const load = loadAt(t);
+    const capacity = pods * c.cap;
+    const latency = latencyFor(load, capacity, c.cap);
+    let desired;
+
+    if (mode === 'hpa') {
+      // reactive: sizes to current load, slow to react
+      desired = Math.ceil(load / c.cap / 0.8);
+    } else {
+      // predictive: sizes to forecast load a few ticks ahead, with headroom
+      const future = loadAt(t + c.hor) * 0.5 + load * 0.5;
+      desired = Math.ceil(future / c.cap / 0.75);
+    }
+    desired = Math.min(c.max, Math.max(c.min, desired));
+
+    const before = pods;
+    // HPA moves at most one step per tick; smart moves toward target faster
+    const maxStep = mode === 'hpa' ? 2 : 6;
+    if (desired > pods) pods = Math.min(desired, pods + maxStep);
+    else if (desired < pods) pods = Math.max(desired, pods - (mode === 'hpa' ? 1 : 2));
+
+    history.push({ load, capacity: before * c.cap, latency, slo: c.slo, pods });
+    if (history.length > 120) history.shift();
+
+    if (pods !== before) {
+      addLog('load=' + load + ' · pods ' + before + ' → ' + pods, pods > before ? 'up' : 'down');
+    }
+    if (latency > c.slo) addLog('p99 ' + latency + 'ms exceeds SLO ' + c.slo + 'ms', 'down');
+
+    render();
+  }
+
+  function latencyFor(load, capacity, capPerPod) {
+    const util = capacity > 0 ? load / capacity : 2;
+    const base = 60;
+    if (util < 0.6) return Math.round(base + util * 40);
+    return Math.round(base + Math.pow(Math.max(util - 0.6, 0), 2) * 900 + 40);
+  }
+
+  function addLog(msg, cls) {
+    const d = document.createElement('div');
+    d.innerHTML = '<span class="t">t' + String(t).padStart(3, '0') + '</span> <span class="' + cls + '"></span>';
+    d.querySelector('span:last-child').textContent = msg;
+    const log = $('log');
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function render() {
+    const c = cfg();
+    const last = history[history.length - 1] || { load: 0, latency: 0, pods: pods };
+    $('k-load').textContent = last.load;
+    $('k-pods').textContent = pods;
+    const lat = $('k-lat');
+    lat.textContent = last.latency;
+    lat.className = 'v' + (last.latency > c.slo ? ' warn' : '');
+    $('k-cost').textContent = (pods / c.max * 100).toFixed(0) + '%';
+    drawChart(c);
+  }
+
+  function drawChart(c) {
+    const cv = $('chart'), ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height, pad = 30;
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = '#bfe5cc'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad + (H - 2 * pad) * i / 4;
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+    }
+    if (history.length < 2) return;
+    const maxY = Math.max(800, ...history.map(h => Math.max(h.load, h.capacity)));
+    const x = i => pad + (W - 2 * pad) * i / 119;
+    const y = v => H - pad - (H - 2 * pad) * v / maxY;
+
+    // capacity line
+    ctx.strokeStyle = '#0f6b33'; ctx.lineWidth = 2; ctx.beginPath();
+    history.forEach((h, i) => i ? ctx.lineTo(x(i), y(h.capacity)) : ctx.moveTo(x(i), y(h.capacity)));
+    ctx.stroke();
+
+    // load line
+    ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 3; ctx.beginPath();
+    history.forEach((h, i) => i ? ctx.lineTo(x(i), y(h.load)) : ctx.moveTo(x(i), y(h.load)));
+    ctx.stroke();
+
+    // breach markers
+    ctx.fillStyle = '#c2410c';
+    history.forEach((h, i) => { if (h.latency > c.slo) ctx.fillRect(x(i) - 2, H - pad + 6, 4, 6); });
+  }
+
+  function syncLabels() {
+    const c = cfg();
+    $('v-min').textContent = c.min;
+    $('v-max').textContent = c.max;
+    $('v-slo').textContent = c.slo;
+    $('v-hor').textContent = c.hor;
+    $('v-cap').textContent = c.cap;
+  }
+
+  function setRunning(on) {
+    running = on;
+    $('run').textContent = on ? 'pause' : 'start';
+    $('run').classList.toggle('primary', !on);
+    $('dot').classList.toggle('off', !on);
+    $('state').textContent = on ? 'running · ' + mode : 'stopped';
+  }
+  function stop() { clearInterval(timer); timer = null; setRunning(false); }
+
+  $('run').onclick = () => {
+    if (running) { stop(); return; }
+    setRunning(true);
+    timer = setInterval(step, 400);
+  };
+  $('spike').onclick = () => {
+    spikeLeft = 8;
+    addLog('traffic spike injected', 'up');
+  };
+  $('reset').onclick = reset;
+
+  document.querySelectorAll('#mode button').forEach(b => {
+    b.onclick = () => {
+      mode = b.dataset.mode;
+      document.querySelectorAll('#mode button').forEach(x => x.classList.toggle('on', x === b));
+      addLog('policy → ' + mode, '');
+      if (running) $('state').textContent = 'running · ' + mode;
+    };
+  });
+
+  ['min', 'max', 'slo', 'hor', 'cap'].forEach(id => $(id).addEventListener('input', () => {
+    syncLabels();
+    const c = cfg();
+    if (pods < c.min) pods = c.min;
+    if (pods > c.max) pods = c.max;
+  }));
+
+  syncLabels();
+  reset();
+})();
+</script>
+
+</body>
+</html>

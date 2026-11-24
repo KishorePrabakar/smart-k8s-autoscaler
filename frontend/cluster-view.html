@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cluster View</title>
+<style>
+  :root {
+    --white: #ffffff;
+    --green: #16a34a;
+    --green-dark: #0f6b33;
+    --green-light: #e8f7ee;
+    --text: #1a1a1a;
+    --muted: #5b6b5f;
+    --border: #bfe5cc;
+    --red: #c2410c;
+    --amber: #b45309;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 14px; color: var(--text); background: var(--white);
+  }
+  header {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;
+    border-bottom: 2px solid var(--green); padding: 14px 20px;
+  }
+  header h1 { margin: 0; font-size: 18px; color: var(--green-dark); }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .legend span::before {
+    content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -2px; background: var(--c);
+  }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button {
+    font: inherit; padding: 7px 12px; border: 1px solid var(--green); background: var(--white);
+    color: var(--green-dark); cursor: pointer;
+  }
+  button.primary { background: var(--green); color: var(--white); }
+  button:hover { background: var(--green-light); }
+  button.primary:hover { background: var(--green-dark); }
+  main { padding: 16px 20px 40px; display: grid; gap: 18px; }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .sum { border: 1px solid var(--border); padding: 12px; }
+  .sum .l { color: var(--muted); font-size: 12px; }
+  .sum .v { font-size: 22px; font-weight: bold; color: var(--green-dark); }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--green-dark); margin: 0 0 10px; }
+  .panel { border: 1px solid var(--border); padding: 14px; }
+
+  /* pod grid */
+  .pods { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 6px; }
+  .pod {
+    aspect-ratio: 1; border: 1px solid var(--border); background: var(--green-light);
+    display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text);
+    transition: background .3s, border-color .3s;
+  }
+  .pod.new { border: 2px dashed var(--green); }
+  .pod.hot { background: var(--red); color: var(--white); border-color: var(--red); }
+  .pod.warm { background: var(--amber); color: var(--white); border-color: var(--amber); }
+  .pod.idle { background: var(--white); color: var(--muted); }
+  .pod.mid { background: var(--green); color: var(--white); border-color: var(--green); }
+
+  /* service table */
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: normal; font-size: 12px; }
+  .bar { width: 100%; height: 10px; border: 1px solid var(--green); background: var(--white); }
+  .bar i { display: block; height: 100%; background: var(--green); }
+  .ok { color: var(--green-dark); }
+  .breach { color: var(--red); font-weight: bold; }
+  .note { color: var(--muted); font-size: 12px; }
+  /* site navigation */
+  .vnav { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px; border-bottom: 1px solid #16a34a; background: #ffffff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .vnav a { color: #0f6b33; text-decoration: none; padding: 5px 10px; border: 1px solid transparent; }
+  .vnav a:hover { border-color: #16a34a; background: #e8f7ee; }
+  .vnav a[aria-current="page"] { background: #16a34a; color: #ffffff; }
+  @media (max-width: 600px) { .vnav { padding: 8px 12px; } .vnav a { padding: 4px 7px; } }
+</style>
+</head>
+<body>
+<nav class="vnav" aria-label="Main">
+    <a href="index.html">console</a>
+    <a href="cluster-view.html" aria-current="page">cluster</a>
+    <a href="timeline-view.html">timeline</a>
+    <a href="tradeoff-view.html">trade-off</a>
+    <a href="alerts-view.html">alerts</a>
+    <a href="explainer.html">about</a>
+  </nav>
+
+
+<header>
+  <h1>&gt; cluster view · production</h1>
+  <div class="toolbar">
+    <button id="toggle" class="primary">pause</button>
+    <button id="surge">surge</button>
+    <button id="calm">calm</button>
+  </div>
+</header>
+
+<main>
+  <div class="summary">
+    <div class="sum"><div class="l">nodes</div><div class="v">6</div></div>
+    <div class="sum"><div class="l">pods running</div><div class="v" id="s-pods">0</div></div>
+    <div class="sum"><div class="l">avg utilization</div><div class="v" id="s-util">0%</div></div>
+    <div class="sum"><div class="l">services in breach</div><div class="v" id="s-breach">0</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>pod map</h2>
+    <div class="legend">
+      <span style="--c:#ffffff">idle &lt;30%</span>
+      <span style="--c:#e8f7ee">low 30–60%</span>
+      <span style="--c:#16a34a">target 60–80%</span>
+      <span style="--c:#b45309">high 80–95%</span>
+      <span style="--c:#c2410c">saturated &gt;95%</span>
+    </div>
+    <div style="height:12px"></div>
+    <div class="pods" id="pods"></div>
+    <p class="note">Each cell is one pod. Dashed borders mark pods added in the last cycle.</p>
+  </div>
+
+  <div class="panel">
+    <h2>services</h2>
+    <table>
+      <thead>
+        <tr><th>service</th><th>pods</th><th style="width:34%">utilization</th><th>p99 (ms)</th><th>status</th></tr>
+      </thead>
+      <tbody id="svc"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+(function () {
+  const services = [
+    { name: 'checkout-api', slo: 250, base: 0.62, min: 3, max: 16 },
+    { name: 'search',       slo: 200, base: 0.48, min: 2, max: 12 },
+    { name: 'payments',     slo: 300, base: 0.55, min: 3, max: 10 },
+    { name: 'catalog',      slo: 220, base: 0.40, min: 2, max: 8  },
+    { name: 'notifications',slo: 400, base: 0.30, min: 1, max: 6  }
+  ];
+
+  let surge = 1, running = true, tick = 0;
+
+  services.forEach(s => {
+    s.pods = s.min + 1;
+    s.util = s.base;
+    s.latency = 120;
+  });
+
+  function simulate() {
+    tick++;
+    const wave = 0.85 + 0.25 * Math.sin(tick / 6);
+    services.forEach(s => {
+      const demand = s.base * wave * surge * (0.95 + Math.random() * 0.1);
+      const capacityNeeded = demand * s.pods / 0.7;   // pods needed for ~70% target
+      // smart policy: move pod count toward need
+      const desired = Math.round(Math.min(s.max, Math.max(s.min, capacityNeeded)));
+      s.added = 0;
+      if (desired > s.pods) { s.added = Math.min(2, desired - s.pods); s.pods += s.added; }
+      else if (desired < s.pods) s.pods -= 1;
+      s.util = Math.min(1.2, demand * (s.pods > 0 ? (s.pods - 0) / s.pods : 1) * 1.0);
+      s.util = Math.min(1.2, demand * 1.0 * (services.length ? 1 : 1));
+      s.util = Math.min(1.2, (demand * s.base ? demand : demand) * (1 / (s.pods / Math.max(s.min, 1))) * 0.9 + demand * 0.1);
+      s.latency = Math.round(90 + Math.pow(Math.max(s.util - 0.6, 0), 2) * 700 + Math.random() * 20);
+    });
+    render();
+  }
+
+  function cls(u) {
+    if (u > 0.95) return 'hot';
+    if (u > 0.8) return 'warm';
+    if (u >= 0.6) return 'mid';
+    if (u >= 0.3) return 'low';
+    return 'idle';
+  }
+
+  function render() {
+    const podsEl = document.getElementById('pods');
+    podsEl.innerHTML = '';
+    let total = 0, utilSum = 0, breaches = 0;
+    services.forEach((s, si) => {
+      total += s.pods; utilSum += s.util;
+      if (s.latency > s.slo) breaches++;
+      for (let i = 0; i < s.pods; i++) {
+        const d = document.createElement('div');
+        const u = Math.min(1.2, s.util * (0.85 + ((i * 37 + si * 13) % 30) / 100));
+        d.className = 'pod ' + (cls(u) === 'low' ? '' : cls(u)) + (i >= s.pods - (s.added || 0) ? ' new' : '');
+        d.title = s.name + ' · pod ' + (i + 1) + ' · ' + Math.round(u * 100) + '%';
+        d.textContent = si === 0 ? '' : '';
+        podsEl.appendChild(d);
+      }
+    });
+    document.getElementById('s-pods').textContent = total;
+    document.getElementById('s-util').textContent = Math.round(utilSum / services.length * 100) + '%';
+    document.getElementById('s-breach').textContent = breaches;
+
+    const tbody = document.getElementById('svc');
+    tbody.innerHTML = services.map(s => {
+      const pct = Math.min(100, Math.round(s.util * 100));
+      const breach = s.latency > s.slo;
+      return '<tr>' +
+        '<td>' + s.name + '</td>' +
+        '<td>' + s.pods + '</td>' +
+        '<td><div class="bar"><i style="width:' + Math.min(100, pct) + '%"></i></div> <span class="note">' + pct + '%</span></td>' +
+        '<td>' + s.latency + '</td>' +
+        '<td class="' + (breach ? 'breach">breach' : 'ok">ok') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  document.getElementById('toggle').onclick = function () {
+    running = !running;
+    this.textContent = running ? 'pause' : 'resume';
+    this.classList.toggle('primary', running);
+  };
+  document.getElementById('surge').onclick = () => { surge = 1.8; };
+  document.getElementById('calm').onclick = () => { surge = 1; };
+
+  render();
+  setInterval(() => { if (running) simulate(); }, 900);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scaling Timeline</title>
+<style>
+  :root { --white:#fff; --green:#16a34a; --green-dark:#0f6b33; --green-light:#e8f7ee; --text:#1a1a1a; --muted:#5b6b5f; --border:#bfe5cc; --red:#c2410c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:14px; color:var(--text); background:var(--white); }
+  header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; border-bottom:2px solid var(--green); padding:14px 20px; }
+  header h1 { margin:0; font-size:18px; color:var(--green-dark); }
+  button { font:inherit; padding:7px 12px; border:1px solid var(--green); background:var(--white); color:var(--green-dark); cursor:pointer; }
+  button.primary { background:var(--green); color:var(--white); }
+  button:hover { background:var(--green-light); }
+  main { padding:16px 20px 40px; display:grid; gap:16px; }
+  .panel { border:1px solid var(--border); padding:14px; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--green-dark); margin:0 0 10px; }
+  .row { display:grid; grid-template-columns: 140px 1fr; align-items:center; gap:10px; margin:8px 0; }
+  .row .name { font-size:13px; }
+  .track { position:relative; height:26px; border:1px solid var(--border); background:var(--white); }
+  .seg { position:absolute; top:3px; bottom:3px; background:var(--green); }
+  .seg.hpa { background:var(--white); border:1px dashed var(--green); }
+  .seg.breach { background:var(--red); }
+  .axis { display:grid; grid-template-columns:140px 1fr; font-size:11px; color:var(--muted); margin-top:4px; }
+  .axis div:last-child { display:flex; justify-content:space-between; }
+  .legend { display:flex; gap:16px; font-size:12px; color:var(--muted); margin-bottom:10px; flex-wrap:wrap; }
+  .legend i { display:inline-block; width:12px; height:12px; vertical-align:-2px; margin-right:6px; }
+  .events { font-size:13px; }
+  .events div { padding:4px 0; border-bottom:1px dashed var(--border); }
+  .events .t { color:var(--muted); display:inline-block; width:60px; }
+  /* site navigation */
+  .vnav { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px; border-bottom: 1px solid #16a34a; background: #ffffff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .vnav a { color: #0f6b33; text-decoration: none; padding: 5px 10px; border: 1px solid transparent; }
+  .vnav a:hover { border-color: #16a34a; background: #e8f7ee; }
+  .vnav a[aria-current="page"] { background: #16a34a; color: #ffffff; }
+  @media (max-width: 600px) { .vnav { padding: 8px 12px; } .vnav a { padding: 4px 7px; } }
+</style>
+</head>
+<body>
+<nav class="vnav" aria-label="Main">
+    <a href="index.html">console</a>
+    <a href="cluster-view.html">cluster</a>
+    <a href="timeline-view.html" aria-current="page">timeline</a>
+    <a href="tradeoff-view.html">trade-off</a>
+    <a href="alerts-view.html">alerts</a>
+    <a href="explainer.html">about</a>
+  </nav>
+
+<header>
+  <h1>&gt; scaling timeline · last 24h</h1>
+  <button id="toggle" class="primary">pause</button>
+</header>
+
+<main>
+  <div class="panel">
+    <h2>pods over time</h2>
+    <div class="legend">
+      <span><i style="background:#16a34a"></i>smart policy</span>
+      <span><i style="border:1px dashed #16a34a;background:#fff"></i>stock HPA</span>
+      <span><i style="background:#c2410c"></i>SLO breach window</span>
+    </div>
+    <div id="tracks"></div>
+    <div class="axis"><div></div><div><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div></div>
+  </div>
+
+  <div class="panel">
+    <h2>event feed</h2>
+    <div class="events" id="events"></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  const services = ['checkout-api', 'search', 'payments', 'catalog'];
+  const HOURS = 24, STEPS = 96;   // 15-minute buckets
+  let data = {}, running = true, cursor = 0;
+
+  function genSeries(seed) {
+    const out = [];
+    for (let i = 0; i < STEPS; i++) {
+      const h = i / 4;
+      const demand = 0.5 + 0.4 * Math.sin((h - 6) / 24 * Math.PI * 2) + 0.1 * Math.sin(i * seed);
+      const smart = Math.max(2, Math.round(demand * 12));
+      const hpa = Math.max(2, Math.round(demand * 12 - (i % 8 < 3 ? 2 : 0)));
+      out.push({ smart, hpa, breach: Math.random() < 0.05 && demand > 0.8 });
+    }
+    return out;
+  }
+
+  function build() {
+    services.forEach((s, idx) => { data[s] = genSeries(idx + 1); });
+    const tracks = document.getElementById('tracks');
+    tracks.innerHTML = '';
+    services.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div class="name">' + s + '</div><div class="track" data-s="' + s + '"></div>';
+      tracks.appendChild(row);
+    });
+    draw();
+  }
+
+  function draw() {
+    services.forEach(s => {
+      const track = document.querySelector('.track[data-s="' + s + '"]');
+      track.innerHTML = '';
+      const series = data[s];
+      const maxPods = 16;
+      series.forEach((p, i) => {
+        const left = (i / STEPS) * 100, width = (1 / STEPS) * 100;
+        const b = document.createElement('div');
+        b.className = 'seg' + (p.breach ? ' breach' : '');
+        b.style.left = left + '%';
+        b.style.width = width + '%';
+        b.style.top = (100 - (p.smart / maxPods) * 100) / 2 + '%';
+        b.style.height = Math.max(4, (p.smart / maxPods) * 100) + '%';
+        b.title = s + ' · ' + Math.round(i / 4) + ':00 · smart ' + p.smart + ' / hpa ' + p.hpa;
+        track.appendChild(b);
+      });
+    });
+  }
+
+  function addEvent(msg, cls) {
+    const ev = document.getElementById('events');
+    const d = document.createElement('div');
+    const h = String(Math.floor(cursor / 4)).padStart(2, '0');
+    const m = String((cursor % 4) * 15).padStart(2, '0');
+    d.innerHTML = '<span class="t">' + h + ':' + m + '</span><span style="color:' + (cls || 'inherit') + '"></span>';
+    d.querySelector('span:last-child').textContent = msg;
+    ev.prepend(d);
+    while (ev.children.length > 12) ev.lastChild.remove();
+  }
+
+  function tick() {
+    if (!running) return;
+    services.forEach(s => {
+      const p = data[s][cursor];
+      if (p.breach) addEvent(s + ' p99 over SLO window', '#c2410c');
+      if (p.smart > p.hpa + 1) addEvent(s + ' smart scaled ahead of HPA (' + p.smart + ' vs ' + p.hpa + ')', '#0f6b33');
+    });
+    cursor = (cursor + 1) % STEPS;
+  }
+
+  document.getElementById('toggle').onclick = function () {
+    running = !running;
+    this.textContent = running ? 'pause' : 'resume';
+    this.classList.toggle('primary', running);
+  };
+
+  build();
+  setInterval(tick, 700);
+})();
+</script>
+
+</body>
+</html>

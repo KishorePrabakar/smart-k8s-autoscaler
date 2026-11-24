@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scaling Alerts</title>
+<style>
+  :root { --white:#fff; --green:#16a34a; --green-dark:#0f6b33; --green-light:#e8f7ee; --text:#1a1a1a; --muted:#5b6b5f; --border:#bfe5cc; --red:#c2410c; --amber:#b45309; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:14px; color:var(--text); background:var(--white); }
+  header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; border-bottom:2px solid var(--green); padding:14px 20px; }
+  header h1 { margin:0; font-size:18px; color:var(--green-dark); }
+  .filters { display:flex; gap:6px; flex-wrap:wrap; }
+  button { font:inherit; padding:6px 11px; border:1px solid var(--green); background:var(--white); color:var(--green-dark); cursor:pointer; }
+  button.on { background:var(--green); color:var(--white); }
+  button:hover { background:var(--green-light); }
+  main { padding:16px 20px 40px; display:grid; gap:16px; }
+  .summary { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:10px; }
+  .sum { border:1px solid var(--border); padding:12px; }
+  .sum .l { color:var(--muted); font-size:12px; }
+  .sum .v { font-size:22px; font-weight:bold; color:var(--green-dark); }
+  .sum .v.red { color:var(--red); }
+  .sum .v.amber { color:var(--amber); }
+  .panel { border:1px solid var(--border); padding:14px; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--green-dark); margin:0 0 10px; }
+  .alert { display:grid; grid-template-columns:90px 110px 1fr auto; gap:12px; align-items:center; border-bottom:1px dashed var(--border); padding:10px 4px; }
+  .alert:last-child { border-bottom:none; }
+  .sev { font-size:11px; padding:3px 6px; border:1px solid; text-align:center; }
+  .sev.crit { color:var(--red); border-color:var(--red); }
+  .sev.warn { color:var(--amber); border-color:var(--amber); }
+  .sev.info { color:var(--green-dark); border-color:var(--green); }
+  .svc { color:var(--muted); }
+  .msg { }
+  .msg small { color:var(--muted); display:block; }
+  .ack { font-size:12px; padding:4px 8px; }
+  .alert.done { opacity:.45; }
+  .empty { color:var(--muted); padding:12px 0; }
+  /* site navigation */
+  .vnav { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px; border-bottom: 1px solid #16a34a; background: #ffffff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .vnav a { color: #0f6b33; text-decoration: none; padding: 5px 10px; border: 1px solid transparent; }
+  .vnav a:hover { border-color: #16a34a; background: #e8f7ee; }
+  .vnav a[aria-current="page"] { background: #16a34a; color: #ffffff; }
+  @media (max-width: 600px) { .vnav { padding: 8px 12px; } .vnav a { padding: 4px 7px; } }
+</style>
+</head>
+<body>
+<nav class="vnav" aria-label="Main">
+    <a href="index.html">console</a>
+    <a href="cluster-view.html">cluster</a>
+    <a href="timeline-view.html">timeline</a>
+    <a href="tradeoff-view.html">trade-off</a>
+    <a href="alerts-view.html" aria-current="page">alerts</a>
+    <a href="explainer.html">about</a>
+  </nav>
+
+
+<header>
+  <h1>&gt; scaling alerts · triage</h1>
+  <div class="filters" id="filters">
+    <button class="on" data-f="all">all</button>
+    <button data-f="crit">critical</button>
+    <button data-f="warn">warning</button>
+    <button data-f="info">info</button>
+  </div>
+</header>
+<main>
+  <div class="summary">
+    <div class="sum"><div class="l">open</div><div class="v" id="n-open">0</div></div>
+    <div class="sum"><div class="l">critical</div><div class="v red" id="n-crit">0</div></div>
+    <div class="sum"><div class="l">warning</div><div class="v amber" id="n-warn">0</div></div>
+    <div class="sum"><div class="l">acknowledged</div><div class="v" id="n-ack">0</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>alert feed</h2>
+    <div id="list"></div>
+    <div class="empty" id="empty" style="display:none">no alerts match this filter.</div>
+  </div>
+</main>
+
+<script>
+(function () {
+  const seed = [
+    { sev: 'crit', svc: 'checkout-api', msg: 'p99 latency 312ms exceeds SLO 250ms', detail: 'scale-up blocked: max replicas reached (40)', age: '2m' },
+    { sev: 'warn', svc: 'search', msg: 'forecast under-predicted load by 22%', detail: 'horizon 10m · model drift check', age: '9m' },
+    { sev: 'warn', svc: 'payments', msg: 'pods pending: insufficient node capacity', detail: 'cluster autoscaler requested 2 nodes', age: '14m' },
+    { sev: 'info', svc: 'catalog', msg: 'scaled down 6 → 3 replicas', detail: 'load fell below 40% for 15m', age: '31m' },
+    { sev: 'info', svc: 'notifications', msg: 'policy updated to smart mode', detail: 'changed by platform-team', age: '1h' },
+    { sev: 'crit', svc: 'payments', msg: 'error rate 2.1% over 1m window', detail: 'auto-rollback to HPA triggered', age: '1h' }
+  ];
+  let filter = 'all';
+  let alerts = seed.map((a, i) => ({ ...a, id: i, acked: false }));
+
+  function render() {
+    const list = document.getElementById('list');
+    const shown = alerts.filter(a => filter === 'all' || a.sev === filter);
+    list.innerHTML = '';
+    shown.forEach(a => {
+      const row = document.createElement('div');
+      row.className = 'alert' + (a.acked ? ' done' : '');
+      row.innerHTML =
+        '<span class="sev ' + a.sev + '">' + a.sev + '</span>' +
+        '<span class="svc">' + a.svc + '</span>' +
+        '<span class="msg"></span>' +
+        '<button class="ack">' + (a.acked ? 'acked' : 'ack') + '</button>';
+      row.querySelector('.msg').innerHTML = '';
+      const txt = document.createElement('span');
+      txt.textContent = a.msg;
+      const sm = document.createElement('small');
+      sm.textContent = a.detail + ' · ' + a.age + ' ago';
+      row.querySelector('.msg').append(txt, sm);
+      row.querySelector('.ack').onclick = () => { a.acked = !a.acked; render(); };
+      list.appendChild(row);
+    });
+    document.getElementById('empty').style.display = shown.length ? 'none' : 'block';
+
+    const open = alerts.filter(a => !a.acked);
+    document.getElementById('n-open').textContent = open.length;
+    document.getElementById('n-crit').textContent = open.filter(a => a.sev === 'crit').length;
+    document.getElementById('n-warn').textContent = open.filter(a => a.sev === 'warn').length;
+    document.getElementById('n-ack').textContent = alerts.length - open.length;
+  }
+
+  document.getElementById('filters').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    filter = b.dataset.f;
+    document.querySelectorAll('#filters button').forEach(x => x.classList.toggle('on', x === b));
+    render();
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>

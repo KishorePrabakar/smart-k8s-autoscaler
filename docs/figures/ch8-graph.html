@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Figure 8.1 - Module Performance</title>
+<style>
+  body { margin: 0; background: #fff; color: #000; font-family: "Times New Roman", Times, serif; }
+  .wrap { max-width: 720px; margin: 24px auto; padding: 16px; }
+  svg { width: 100%; height: auto; display: block; }
+  .cap { text-align: center; font-size: 14px; margin-top: 8px; }
+  @media print { .wrap { margin: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<svg viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg" font-family="Times New Roman, serif">
+  <rect width="640" height="420" fill="#fff"/>
+
+  <!-- axes -->
+  <line x1="80" y1="30" x2="80" y2="350" stroke="#000" stroke-width="2"/>
+  <line x1="80" y1="350" x2="610" y2="350" stroke="#000" stroke-width="2"/>
+
+  <!-- y gridlines and labels (0-100 %) -->
+  <g stroke="#000" stroke-width="0.6" stroke-dasharray="3 4">
+    <line x1="80" y1="290" x2="610" y2="290"/>
+    <line x1="80" y1="230" x2="610" y2="230"/>
+    <line x1="80" y1="170" x2="610" y2="170"/>
+    <line x1="80" y1="110" x2="610" y2="110"/>
+    <line x1="80" y1="50" x2="610" y2="50"/>
+  </g>
+  <g font-size="13" text-anchor="end" fill="#000">
+    <text x="72" y="354">0</text>
+    <text x="72" y="294">20</text>
+    <text x="72" y="234">40</text>
+    <text x="72" y="174">60</text>
+    <text x="72" y="114">80</text>
+    <text x="72" y="54">100</text>
+  </g>
+  <text x="22" y="190" font-size="14" transform="rotate(-90 22 190)" text-anchor="middle">Performance score (%)</text>
+
+  <!-- bars: Module, Scaling accuracy, Decision reliability -->
+  <!-- Bar groups centred at x = 165, 310, 455, 580 -->
+  <!-- Series A: solid black (stock HPA); Series B: hatched (smart autoscaler) -->
+  <defs>
+    <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="6" height="6" fill="#fff"/>
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#000" stroke-width="2"/>
+    </pattern>
+  </defs>
+
+  <!-- Group 1: Metric collection -->
+  <rect x="120" y="170" width="38" height="180" fill="#000" stroke="#000"/>
+  <rect x="162" y="110" width="38" height="240" fill="url(#hatch)" stroke="#000"/>
+
+  <!-- Group 2: Replica calculation -->
+  <rect x="265" y="200" width="38" height="150" fill="#000" stroke="#000"/>
+  <rect x="307" y="80" width="38" height="270" fill="url(#hatch)" stroke="#000"/>
+
+  <!-- Group 3: Policy evaluation -->
+  <rect x="410" y="230" width="38" height="120" fill="#000" stroke="#000"/>
+  <rect x="452" y="50" width="38" height="300" fill="url(#hatch)" stroke="#000"/>
+
+  <!-- Group 4: Decision reliability -->
+  <rect x="555" y="190" width="38" height="160" fill="#000" stroke="#000"/>
+  <rect x="597" y="95" width="38" height="255" fill="url(#hatch)" stroke="#000"/>
+
+  <!-- value labels -->
+  <g font-size="12" text-anchor="middle" fill="#000">
+    <text x="139" y="162">62</text><text x="181" y="102">85</text>
+    <text x="284" y="192">70</text><text x="326" y="72">92</text>
+    <text x="429" y="222">55</text><text x="471" y="42">98</text>
+    <text x="574" y="182">68</text>
+  </g>
+
+  <!-- category labels -->
+  <g font-size="14" text-anchor="middle" fill="#000">
+    <text x="160" y="372">Metric collection</text>
+    <text x="305" y="372">Replica calculation</text>
+    <text x="450" y="372">Policy evaluation</text>
+    <text x="575" y="372">Decision reliability</text>
+  </g>
+
+  <!-- legend -->
+  <rect x="100" y="394" width="16" height="12" fill="#000"/>
+  <text x="124" y="405" font-size="13">Stock HPA (baseline)</text>
+  <rect x="300" y="394" width="16" height="12" fill="url(#hatch)" stroke="#000"/>
+  <text x="324" y="405" font-size="13">Smart autoscaler</text>
+</svg>
+<p class="cap"><b>Figure 8.1</b> Sample performance of the autoscaler modules, baseline versus smart policy. Values are illustrative.</p>
+</div>
+</body>
+</html>

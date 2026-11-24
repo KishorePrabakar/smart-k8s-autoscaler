@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What Is This Project?</title>
+<style>
+  :root { --white:#ffffff; --green:#16a34a; --green-dark:#0f6b33; --green-light:#e8f7ee; --text:#1a1a1a; --muted:#5b6b5f; --border:#bfe5cc; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:15px; line-height:1.6; color:var(--text); background:var(--white); }
+  main { max-width:860px; margin:0 auto; padding:0 20px 56px; }
+  section { padding:36px 0; border-bottom:1px dashed var(--border); }
+  section:last-child { border-bottom:none; }
+  h1 { font-size:28px; color:var(--green-dark); margin:0 0 8px; }
+  h2 { font-size:26px; color:var(--green-dark); margin:0 0 18px; }
+  .hero { padding:36px 0 28px; text-align:center; }
+  .hero .tag { color:var(--green); font-size:13px; }
+  .hero p { color:var(--muted); margin:0 auto; max-width:520px; }
+  svg { width:100%; height:auto; display:block; }
+  .fig { border:1px solid var(--border); padding:14px; margin:0 auto; max-width:620px; }
+  .fig figcaption { color:var(--muted); font-size:13px; text-align:center; margin-top:8px; }
+  .row { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:18px; }
+  .tile { border:1px solid var(--border); padding:14px; text-align:center; }
+  .tile .ico { width:56px; height:56px; margin:0 auto 8px; }
+  .tile b { display:block; color:var(--green-dark); margin-bottom:4px; }
+  .tile span { font-size:13px; color:var(--muted); }
+  .big { margin-top:18px; border:2px solid var(--green); padding:16px; text-align:center; color:var(--green-dark); font-size:17px; }
+  .links { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; }
+  .links a { display:block; border:1px solid var(--green); padding:14px; text-decoration:none; color:var(--text); }
+  .links a:hover { background:var(--green-light); }
+  .links a b { color:var(--green-dark); display:block; }
+  .links a span { font-size:13px; color:var(--muted); }
+  footer { border-top:2px solid var(--green); text-align:center; color:var(--muted); font-size:13px; padding:20px; }
+  /* site navigation */
+  .vnav { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px; border-bottom: 1px solid #16a34a; background: #ffffff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .vnav a { color: #0f6b33; text-decoration: none; padding: 5px 10px; border: 1px solid transparent; }
+  .vnav a:hover { border-color: #16a34a; background: #e8f7ee; }
+  .vnav a[aria-current="page"] { background: #16a34a; color: #ffffff; }
+  @media (max-width: 600px) { .vnav { padding: 8px 12px; } .vnav a { padding: 4px 7px; } h1 { font-size:22px; } }
+</style>
+</head>
+<body>
+<nav class="vnav" aria-label="Main">
+    <a href="index.html">console</a>
+    <a href="cluster-view.html">cluster</a>
+    <a href="timeline-view.html">timeline</a>
+    <a href="tradeoff-view.html">trade-off</a>
+    <a href="alerts-view.html">alerts</a>
+    <a href="explainer.html" aria-current="page">about</a>
+  </nav>
+
+<main>
+
+  <section class="hero">
+    <div class="tag">[ the big idea ]</div>
+    <h1>Smart Helpers, Happy Customers</h1>
+    <p>Less waiting. Less wasted money.</p>
+
+    <figure class="fig" style="margin-top:22px">
+      <svg viewBox="0 0 600 260" role="img" aria-label="A lemonade stand with a long line of customers and a helper">
+        <rect x="0" y="220" width="600" height="2" fill="#16a34a"/>
+        <rect x="200" y="110" width="200" height="20" fill="#16a34a"/>
+        <path d="M200 110 L210 130 L220 110 L230 130 L240 110 L250 130 L260 110 L270 130 L280 110 L290 130 L300 110 L310 130 L320 110 L330 130 L340 110 L350 130 L360 110 L370 130 L380 110 L390 130 L400 110" fill="#16a34a" stroke="#16a34a"/>
+        <rect x="210" y="130" width="180" height="90" fill="#ffffff" stroke="#16a34a" stroke-width="3"/>
+        <rect x="265" y="165" width="70" height="55" fill="#e8f7ee" stroke="#0f6b33" stroke-width="2"/>
+        <text x="300" y="150" font-size="16" text-anchor="middle" fill="#0f6b33" font-family="monospace" font-weight="bold">LEMON</text>
+        <circle cx="120" cy="150" r="14" fill="#0f6b33"/>
+        <rect x="104" y="166" width="32" height="54" fill="#0f6b33"/>
+        <text x="120" y="240" font-size="13" text-anchor="middle" fill="#5b6b5f" font-family="monospace">helper</text>
+        <g fill="#1a1a1a">
+          <circle cx="440" cy="158" r="11"/><rect x="430" y="170" width="20" height="46"/>
+          <circle cx="478" cy="158" r="11"/><rect x="468" y="170" width="20" height="46"/>
+          <circle cx="516" cy="158" r="11"/><rect x="506" y="170" width="20" height="46"/>
+          <circle cx="554" cy="158" r="11"/><rect x="544" y="170" width="20" height="46"/>
+        </g>
+        <text x="497" y="240" font-size="13" text-anchor="middle" fill="#5b6b5f" font-family="monospace">the line</text>
+      </svg>
+      <figcaption>A busy stand needs the right number of helpers.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>the problem</h2>
+    <div class="row">
+      <div class="tile">
+        <svg class="ico" viewBox="0 0 60 60" aria-hidden="true">
+          <g fill="#1a1a1a"><circle cx="14" cy="18" r="6"/><circle cx="30" cy="18" r="6"/><circle cx="46" cy="18" r="6"/></g>
+          <rect x="8" y="28" width="44" height="6" fill="#16a34a"/>
+          <rect x="8" y="40" width="44" height="6" fill="#e8f7ee" stroke="#16a34a"/>
+        </svg>
+        <b>Too few helpers</b>
+        <span>Long lines. Unhappy customers.</span>
+      </div>
+      <div class="tile">
+        <svg class="ico" viewBox="0 0 60 60" aria-hidden="true">
+          <g fill="none" stroke="#16a34a" stroke-width="2"><circle cx="14" cy="22" r="6"/><circle cx="30" cy="22" r="6"/><circle cx="46" cy="22" r="6"/></g>
+          <rect x="8" y="34" width="44" height="6" fill="#e8f7ee" stroke="#16a34a"/>
+          <line x1="6" y1="6" x2="54" y2="54" stroke="#c2410c" stroke-width="3"/>
+        </svg>
+        <b>Too many helpers</b>
+        <span>Idle people. Wasted money.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>the fix: a smart helper-manager</h2>
+    <figure class="fig">
+      <svg viewBox="0 0 600 150" role="img" aria-label="Four steps in a loop: look, guess, decide, act">
+        <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#16a34a"/></marker></defs>
+        <g font-family="monospace" font-size="15" text-anchor="middle">
+          <rect x="10" y="40" width="120" height="70" fill="#e8f7ee" stroke="#16a34a" stroke-width="2"/>
+          <text x="70" y="70" font-weight="bold" fill="#0f6b33">1. LOOK</text>
+          <text x="70" y="92" font-size="12" fill="#5b6b5f">count the crowd</text>
+
+          <rect x="160" y="40" width="120" height="70" fill="#e8f7ee" stroke="#16a34a" stroke-width="2"/>
+          <text x="220" y="70" font-weight="bold" fill="#0f6b33">2. GUESS</text>
+          <text x="220" y="92" font-size="12" fill="#5b6b5f">what's coming next</text>
+
+          <rect x="310" y="40" width="120" height="70" fill="#e8f7ee" stroke="#16a34a" stroke-width="2"/>
+          <text x="370" y="70" font-weight="bold" fill="#0f6b33">3. DECIDE</text>
+          <text x="370" y="92" font-size="12" fill="#5b6b5f">how many helpers</text>
+
+          <rect x="460" y="40" width="120" height="70" fill="#e8f7ee" stroke="#16a34a" stroke-width="2"/>
+          <text x="520" y="70" font-weight="bold" fill="#0f6b33">4. ACT</text>
+          <text x="520" y="92" font-size="12" fill="#5b6b5f">add or remove</text>
+        </g>
+        <g stroke="#16a34a" stroke-width="2" marker-end="url(#ar)">
+          <line x1="132" y1="75" x2="158" y2="75"/>
+          <line x1="282" y1="75" x2="308" y2="75"/>
+          <line x1="432" y1="75" x2="458" y2="75"/>
+        </g>
+        <path d="M520 112 L520 136 L70 136 L70 114" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+        <text x="295" y="148" font-size="12" text-anchor="middle" fill="#5b6b5f" font-family="monospace">then repeat</text>
+      </svg>
+      <figcaption>Repeats every few seconds.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>three simple rules</h2>
+    <div class="row">
+      <div class="tile">
+        <svg class="ico" viewBox="0 0 60 60" aria-hidden="true">
+          <rect x="6" y="40" width="48" height="8" fill="#e8f7ee" stroke="#16a34a"/>
+          <rect x="6" y="28" width="48" height="8" fill="#e8f7ee" stroke="#16a34a"/>
+          <line x1="6" y1="52" x2="54" y2="52" stroke="#16a34a" stroke-width="3"/>
+        </svg>
+        <b>Never too few</b>
+        <span>Always a minimum, so the stand never closes.</span>
+      </div>
+      <div class="tile">
+        <svg class="ico" viewBox="0 0 60 60" aria-hidden="true">
+          <rect x="6" y="40" width="48" height="8" fill="#16a34a"/>
+          <rect x="6" y="28" width="48" height="8" fill="#16a34a"/>
+          <line x1="6" y1="8" x2="54" y2="8" stroke="#c2410c" stroke-width="3"/>
+        </svg>
+        <b>Never too many</b>
+        <span>A maximum, so the bill stays under control.</span>
+      </div>
+      <div class="tile">
+        <svg class="ico" viewBox="0 0 60 60" aria-hidden="true">
+          <circle cx="30" cy="30" r="22" fill="none" stroke="#16a34a" stroke-width="3"/>
+          <line x1="30" y1="30" x2="30" y2="16" stroke="#0f6b33" stroke-width="3"/>
+          <line x1="30" y1="30" x2="42" y2="34" stroke="#0f6b33" stroke-width="3"/>
+        </svg>
+        <b>Always fast</b>
+        <span>Customers get served within a set time.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>why it matters</h2>
+    <div class="row" style="grid-template-columns:1fr 1fr">
+      <div class="tile">
+        <svg class="ico" viewBox="0 0 60 60" aria-hidden="true" style="width:90px;height:auto"><g fill="#16a34a"><rect x="6" y="30" width="10" height="24"/><rect x="22" y="20" width="10" height="34"/><rect x="38" y="10" width="10" height="44"/></g></svg>
+        <b>Without it</b>
+        <span>Machines sit idle, or people get errors.</span>
+      </div>
+      <div class="tile">
+        <svg class="ico" viewBox="0 0 60 60" aria-hidden="true" style="width:90px;height:auto"><g fill="#16a34a"><rect x="6" y="28" width="10" height="26"/><rect x="22" y="28" width="10" height="26"/><rect x="38" y="28" width="10" height="26"/></g></svg>
+        <b>With it</b>
+        <span>Right-sized, fast, and cheaper to run.</span>
+      </div>
+    </div>
+    <div class="big">Happy customers. Smaller bills.</div>
+  </section>
+
+  <section>
+    <h2>terminologies</h2>
+    <div class="row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      <div class="tile"><b>Kubernetes</b><span>A manager that runs many apps across many computers and keeps them alive.</span></div>
+      <div class="tile"><b>Pod</b><span>One copy of an app. More customers, more pods.</span></div>
+      <div class="tile"><b>Autoscaler</b><span>Something that decides how many pods to run, automatically.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>real-life examples</h2>
+    <div class="row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      <div class="tile"><b>Big sale night</b><span>An online shop sees the crowd grow every evening. The smart helper adds pods before 8 pm, not after the site slows down.</span></div>
+      <div class="tile"><b>Dinner rush</b><span>Food delivery apps are busy from 7 to 9 pm every day. Pods are ready at 6:45.</span></div>
+      <div class="tile"><b>Ticket drop</b><span>A cricket ticket site gets a huge burst the minute sales open. Capacity is in place just before it.</span></div>
+      <div class="tile"><b>Quiet 3 am</b><span>Almost nobody is online. Extra pods are removed, so you stop paying for them.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>what makes it special</h2>
+    <div class="row" style="grid-template-columns:1fr 1fr">
+      <div class="tile"><b>It plans ahead</b><span>Most tools wait until the line is long. This one predicts the crowd.</span></div>
+      <div class="tile"><b>It has a budget</b><span>You set a speed goal and a spending limit. It works inside both.</span></div>
+      <div class="tile"><b>It mixes machines</b><span>Cheap machines that can be taken back are used when safe. Reliable ones cover the rest.</span></div>
+      <div class="tile"><b>It explains itself</b><span>Every decision is logged in plain words, so you can see why it acted.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>what already exists</h2>
+    <div class="row" style="grid-template-columns:1fr 1fr">
+      <div class="tile"><b>Kubernetes HPA</b><span>Built in. Adds pods once the CPU is already busy. Reacts late.</span></div>
+      <div class="tile"><b>Kubernetes VPA</b><span>Changes how big each pod is. Does not add more pods.</span></div>
+      <div class="tile"><b>Cluster Autoscaler, Karpenter</b><span>Adds more computers when the pods have no room left.</span></div>
+      <div class="tile"><b>KEDA</b><span>Scales based on a queue of waiting work, not just CPU.</span></div>
+    </div>
+    <div class="big" style="font-size:15px">The gap: existing tools react late or look at one signal. Research has tried prediction and learning-based scaling, but this project combines forecasting, a budget, and cheap-machine mixing in one system.</div>
+  </section>
+
+  <section>
+    <h2>where to look next</h2>
+    <div class="links">
+      <a href="index.html"><b>console</b><span>move the sliders</span></a>
+      <a href="cluster-view.html"><b>cluster</b><span>every helper, live</span></a>
+      <a href="timeline-view.html"><b>timeline</b><span>a full day</span></a>
+      <a href="tradeoff-view.html"><b>trade-off</b><span>cost vs speed</span></a>
+      <a href="alerts-view.html"><b>alerts</b><span>when a human is needed</span></a>
+    </div>
+    <p style="color:#5b6b5f;font-size:13px;margin-top:18px;text-align:center">Numbers in this demo are made up to show how it works.</p>
+  </section>
+
+</main>
+
+<footer>smart-k8s-autoscaler · about</footer>
+</body>
+</html>

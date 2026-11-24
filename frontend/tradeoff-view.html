@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cost vs Latency</title>
+<style>
+  :root { --white:#fff; --green:#16a34a; --green-dark:#0f6b33; --green-light:#e8f7ee; --text:#1a1a1a; --muted:#5b6b5f; --border:#bfe5cc; --red:#c2410c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:14px; color:var(--text); background:var(--white); }
+  header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; border-bottom:2px solid var(--green); padding:14px 20px; }
+  header h1 { margin:0; font-size:18px; color:var(--green-dark); }
+  main { padding:16px 20px 40px; display:grid; grid-template-columns: 1fr 300px; gap:16px; }
+  @media (max-width: 800px) { main { grid-template-columns:1fr; } }
+  .panel { border:1px solid var(--border); padding:14px; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--green-dark); margin:0 0 10px; }
+  canvas { width:100%; height:380px; display:block; border:1px solid var(--border); cursor:crosshair; }
+  .ctrl { margin-bottom:14px; }
+  .ctrl label { display:flex; justify-content:space-between; font-size:13px; }
+  .ctrl input { width:100%; accent-color:var(--green); }
+  .ctrl .val { color:var(--green-dark); font-weight:bold; }
+  .pick { border:1px solid var(--green); padding:12px; margin-top:12px; }
+  .pick .k { color:var(--muted); font-size:12px; }
+  .pick .v { font-size:18px; font-weight:bold; color:var(--green-dark); margin-bottom:8px; }
+  .note { color:var(--muted); font-size:12px; margin-top:10px; }
+  .pts { font-size:13px; }
+  .pts div { border-bottom:1px dashed var(--border); padding:6px 0; display:flex; justify-content:space-between; }
+  /* site navigation */
+  .vnav { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px; border-bottom: 1px solid #16a34a; background: #ffffff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .vnav a { color: #0f6b33; text-decoration: none; padding: 5px 10px; border: 1px solid transparent; }
+  .vnav a:hover { border-color: #16a34a; background: #e8f7ee; }
+  .vnav a[aria-current="page"] { background: #16a34a; color: #ffffff; }
+  @media (max-width: 600px) { .vnav { padding: 8px 12px; } .vnav a { padding: 4px 7px; } }
+</style>
+</head>
+<body>
+<nav class="vnav" aria-label="Main">
+    <a href="index.html">console</a>
+    <a href="cluster-view.html">cluster</a>
+    <a href="timeline-view.html">timeline</a>
+    <a href="tradeoff-view.html" aria-current="page">trade-off</a>
+    <a href="alerts-view.html">alerts</a>
+    <a href="explainer.html">about</a>
+  </nav>
+
+<header>
+  <h1>&gt; cost vs latency · trade-off</h1>
+</header>
+
+<main>
+  <div class="panel">
+    <h2>configurations</h2>
+    <canvas id="plot" width="900" height="380"></canvas>
+    <p class="note">Each point is a policy setting. Lower-left is cheaper and faster. Click a point to inspect it.</p>
+  </div>
+
+  <div class="panel">
+    <h2>tune headroom</h2>
+    <div class="ctrl">
+      <label>target utilization <span class="val" id="v-t"></span></label>
+      <input type="range" id="t" min="50" max="90" value="70">
+    </div>
+    <div class="ctrl">
+      <label>min replicas <span class="val" id="v-m"></span></label>
+      <input type="range" id="m" min="1" max="8" value="3">
+    </div>
+    <div class="pick" id="pick"></div>
+    <div class="pts" id="pts" style="margin-top:12px"></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  const cv = document.getElementById('plot'), ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height, pad = 56;
+  const CAP = 1; // normalized cost units per pod
+
+  // Simulated trade-off: higher target utilization = cheaper but slower
+  function evaluate(target, minRep) {
+    const t = target / 100;
+    const pods = Math.max(minRep, Math.round(12 * 0.7 / t));
+    const cost = pods * CAP;
+    const p99 = Math.round(90 + Math.pow(Math.max(t - 0.55, 0), 2) * 900 + (minRep < 3 ? 40 : 0));
+    return { target, minRep, pods, cost, p99 };
+  }
+
+  const grid = [];
+  for (let t = 50; t <= 90; t += 5) for (let m = 1; m <= 8; m += 1) grid.push(evaluate(t, m));
+  const maxC = Math.max(...grid.map(g => g.cost)) * 1.1;
+  const maxL = Math.max(...grid.map(g => g.p99)) * 1.1;
+  const minL = Math.min(...grid.map(g => g.p99)) * 0.9;
+
+  const x = c => pad + (c / maxC) * (W - 2 * pad);
+  const y = l => H - pad - ((l - minL) / (maxL - minL)) * (H - 2 * pad);
+
+  let selected = null;
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = '#bfe5cc'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const gy = pad + (H - 2 * pad) * i / 5;
+      ctx.beginPath(); ctx.moveTo(pad, gy); ctx.lineTo(W - pad, gy); ctx.stroke();
+    }
+    ctx.strokeStyle = '#5b6b5f';
+    ctx.beginPath(); ctx.moveTo(pad, H - pad); ctx.lineTo(W - pad, H - pad); ctx.moveTo(pad, pad); ctx.lineTo(pad, H - pad); ctx.stroke();
+    ctx.fillStyle = '#5b6b5f'; ctx.font = '12px ui-monospace, monospace';
+    ctx.fillText('cost (pods)', W - pad - 80, H - pad + 30);
+    ctx.save(); ctx.translate(16, pad + 120); ctx.rotate(-Math.PI / 2); ctx.fillText('p99 latency (ms)', 0, 0); ctx.restore();
+
+    grid.forEach(g => {
+      const isSel = selected && selected.target === g.target && selected.minRep === g.minRep;
+      ctx.beginPath();
+      ctx.arc(x(g.cost), y(g.p99), isSel ? 8 : 5, 0, Math.PI * 2);
+      ctx.fillStyle = g.p99 > 250 ? '#c2410c' : '#16a34a';
+      ctx.globalAlpha = isSel ? 1 : 0.55;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      if (isSel) { ctx.strokeStyle = '#0f6b33'; ctx.lineWidth = 2; ctx.stroke(); }
+    });
+
+    // SLO line at 250ms
+    ctx.strokeStyle = '#c2410c'; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.moveTo(pad, y(250)); ctx.lineTo(W - pad, y(250)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#c2410c'; ctx.fillText('SLO 250ms', W - pad - 80, y(250) - 6);
+  }
+
+  cv.addEventListener('click', e => {
+    const r = cv.getBoundingClientRect();
+    const mx = (e.clientX - r.left) * (W / r.width), my = (e.clientY - r.top) * (H / r.height);
+    let best = null, bd = 1e9;
+    grid.forEach(g => {
+      const d = Math.hypot(x(g.cost) - mx, y(g.p99) - my);
+      if (d < bd) { bd = d; best = g; }
+    });
+    if (best && bd < 30) {
+      selected = best;
+      document.getElementById('t').value = best.target;
+      document.getElementById('m').value = best.minRep;
+      update();
+    }
+  });
+
+  function update() {
+    const t = +document.getElementById('t').value;
+    const m = +document.getElementById('m').value;
+    document.getElementById('v-t').textContent = t + '%';
+    document.getElementById('v-m').textContent = m;
+    const g = evaluate(t, m);
+    selected = g;
+    document.getElementById('pick').innerHTML =
+      '<div class="k">selected policy</div>' +
+      '<div class="v">' + g.pods + ' pods · ' + g.p99 + ' ms</div>' +
+      '<div class="k">' + (g.p99 > 250 ? 'breaches the 250 ms SLO' : 'meets the 250 ms SLO') + '</div>';
+    document.getElementById('pts').innerHTML =
+      '<div><span>target utilization</span><span>' + t + '%</span></div>' +
+      '<div><span>min replicas</span><span>' + m + '</span></div>' +
+      '<div><span>steady-state cost</span><span>' + g.cost.toFixed(0) + ' units</span></div>';
+    draw();
+  }
+
+  document.getElementById('t').addEventListener('input', update);
+  document.getElementById('m').addEventListener('input', update);
+  update();
+})();
+</script>
+
+</body>
+</html>
