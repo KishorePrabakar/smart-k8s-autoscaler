@@ -1,5 +1,7 @@
 # Smart Kubernetes Autoscaler – Demo
 
+**Live demo:** https://kishoreprabakar.github.io/smart-k8s-autoscaler/
+
 A demo of a predictive, cost-aware autoscaler for Kubernetes. The frontend pages are static HTML and the backend is a mock API, so the demo runs without a real cluster.
 
 ## Project layout
